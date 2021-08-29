@@ -354,7 +354,7 @@ define widl_BUILD
         --build='$(BUILD)' \
         --prefix='$(PREFIX)' \
         --target='$(TARGET)' \
-        $(if $(IS_LLVM), --with-widl-includedir='$(PREFIX)/$(TARGET)/$(PROCESSOR)-w64-mingw32/include')
+        --with-widl-includedir='$(PREFIX)/$(TARGET)/$(PROCESSOR)-w64-mingw32/include'
     $(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)'
     $(MAKE) -C '$(BUILD_DIR)' -j 1 $(INSTALL_STRIP_TOOLCHAIN)
 
@@ -395,7 +395,7 @@ define libffi_BUILD
         $(if $(BUILD_STATIC), \
             --disable-structs \
             --disable-raw-api) \
-        $(if $(IS_LLVM), --disable-symvers)
+        --disable-symvers
 
     $(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)'
     $(MAKE) -C '$(BUILD_DIR)' -j 1 $(INSTALL_STRIP_LIB)
@@ -605,27 +605,27 @@ endef
 define librsvg_BUILD
     # Allow building vendored sources with `-Zbuild-std`, see:
     # https://github.com/rust-lang/wg-cargo-std-aware/issues/23#issuecomment-720455524
-    $(if $(IS_LLVM), \
-        cd '$(SOURCE_DIR)' && \
-            MXE_ENABLE_NETWORK=1 \
-            $(TARGET)-cargo vendor -s '$(PREFIX)/$(BUILD)/lib/rustlib/src/rust/library/sysroot/Cargo.toml')
+    cd '$(SOURCE_DIR)' && \
+        MXE_ENABLE_NETWORK=1 \
+        $(TARGET)-cargo vendor -s '$(PREFIX)/$(BUILD)/lib/rustlib/src/rust/library/sysroot/Cargo.toml'
 
-    $(if $(IS_LLVM), \
-        (cd '$(SOURCE_DIR)' && $(PATCH) -p1 -u) < $(realpath $(dir $(lastword $(librsvg_PATCHES))))/librsvg-llvm-mingw.patch \
-        # Update expected Cargo SHA256 hashes for the vendored files we have patched
-        $(SED) -i 's/6ff27ce632a988dd9bcf083dbaa02615254ff29f3e82252539b04f0eb3c629ba/4e83c7139d3bee1826c1f430f57ea39ac099d245d2ca352046b4c448c386078a/' '$(SOURCE_DIR)/vendor/cfg-expr/.cargo-checksum.json'; \
-        $(SED) -i 's/85f31d450b44d1f9e329e72a46d181a22e2933593407eeaaebb120453f82757f/30bd0d4dab0d3ca6a0dad131fec3b93bf336913e300c0a750515e8a1c1a5de70/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'; \
-        $(SED) -i 's/204bc39a8213167dcab8dd273c57e5fae3afbac8fa3887dbe43ad082d55446e4/0e8c4e6440c5377f487918f16a8ea80aae53fa4d47e495a9e9c0119b575db0ab/' '$(SOURCE_DIR)/vendor/windows-sys/.cargo-checksum.json'; \
-        $(SED) -i 's/117b50d6725ee0af0a7b3d197ea580655561f66a870ebc450d96af22bf7f39f6/15e6e8180d52761492423aa3a1284b6640bc3dee9ba030465ec0e15fe6cfe754/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'; \
-        $(SED) -i 's/aa26062784eff574fee4075d23b0ea2fdd1bdbc9a7458b099c8fd307ee61024f/13b5e010a0d45164844fda4ada4d4e965f422f2a27768b3ce495c637714cf66f/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'; \
-        # Install Cargo config
-        $(INSTALL) -d '$(SOURCE_DIR)/.cargo'
-        (echo '[source.crates-io]'; \
-         echo 'registry = "https://github.com/rust-lang/crates.io-index"'; \
-         echo 'replace-with = "vendored-sources"'; \
-         echo '[source.vendored-sources]'; \
-         echo 'directory = "./vendor"';) \
-                 > '$(SOURCE_DIR)/.cargo/config.toml')
+    (cd '$(SOURCE_DIR)' && $(PATCH) -p1 -u) < $(realpath $(dir $(lastword $(librsvg_PATCHES))))/librsvg-llvm-mingw.patch
+
+    # Update expected Cargo SHA256 hashes for the vendored files we have patched
+    $(SED) -i 's/6ff27ce632a988dd9bcf083dbaa02615254ff29f3e82252539b04f0eb3c629ba/4e83c7139d3bee1826c1f430f57ea39ac099d245d2ca352046b4c448c386078a/' '$(SOURCE_DIR)/vendor/cfg-expr/.cargo-checksum.json'
+    $(SED) -i 's/85f31d450b44d1f9e329e72a46d181a22e2933593407eeaaebb120453f82757f/30bd0d4dab0d3ca6a0dad131fec3b93bf336913e300c0a750515e8a1c1a5de70/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'
+    $(SED) -i 's/204bc39a8213167dcab8dd273c57e5fae3afbac8fa3887dbe43ad082d55446e4/0e8c4e6440c5377f487918f16a8ea80aae53fa4d47e495a9e9c0119b575db0ab/' '$(SOURCE_DIR)/vendor/windows-sys/.cargo-checksum.json'
+    $(SED) -i 's/117b50d6725ee0af0a7b3d197ea580655561f66a870ebc450d96af22bf7f39f6/15e6e8180d52761492423aa3a1284b6640bc3dee9ba030465ec0e15fe6cfe754/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'
+    $(SED) -i 's/aa26062784eff574fee4075d23b0ea2fdd1bdbc9a7458b099c8fd307ee61024f/13b5e010a0d45164844fda4ada4d4e965f422f2a27768b3ce495c637714cf66f/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'
+
+    # Install Cargo config
+    $(INSTALL) -d '$(SOURCE_DIR)/.cargo'
+    (echo '[source.crates-io]'; \
+     echo 'registry = "https://github.com/rust-lang/crates.io-index"'; \
+     echo 'replace-with = "vendored-sources"'; \
+     echo '[source.vendored-sources]'; \
+     echo 'directory = "./vendor"';) \
+             > '$(SOURCE_DIR)/.cargo/config'
 
     # Allow libtool to statically link against libintl
     # by specifying lt_cv_deplibs_check_method="pass_all"
@@ -635,21 +635,18 @@ define librsvg_BUILD
         $(MXE_CONFIGURE_OPTS) \
         --disable-pixbuf-loader \
         --disable-introspection \
-        RUST_TARGET='$(PROCESSOR)-pc-windows-gnu$(if $(IS_LLVM),llvm)' \
+        RUST_TARGET='$(PROCESSOR)-pc-windows-gnullvm' \
         CARGO='$(TARGET)-cargo' \
         RUSTC='$(TARGET)-rustc' \
         $(if $(IS_INTL_DUMMY), lt_cv_deplibs_check_method="pass_all") \
         LIBS='-lsynchronization'
 
-    $(if $(IS_GCC), MXE_ENABLE_NETWORK=1) $(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)' bin_SCRIPTS=
+    $(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)' bin_SCRIPTS=
     $(MAKE) -C '$(BUILD_DIR)' -j 1 $(INSTALL_STRIP_LIB) bin_SCRIPTS=
 endef
 
 # compile with CMake
 define poppler_BUILD
-    $(if $(WIN32_THREADS), \
-        (cd '$(SOURCE_DIR)' && $(PATCH) -p1 -u) < $(realpath $(dir $(lastword $(poppler_PATCHES))))/poppler-mingw-std-threads.patch)
-
     cd '$(BUILD_DIR)' && '$(TARGET)-cmake' \
         -DENABLE_LIBTIFF=ON \
         -DENABLE_LIBPNG=ON \
@@ -673,7 +670,6 @@ define poppler_BUILD
         -DBUILD_CPP_TESTS=OFF \
         -DBUILD_MANUAL_TESTS=OFF \
         -DENABLE_GTK_DOC=OFF \
-        $(if $(WIN32_THREADS), -DCMAKE_CXX_FLAGS='$(CXXFLAGS) -I$(PREFIX)/$(TARGET)/include/mingw-std-threads') \
         '$(SOURCE_DIR)'
 
     $(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)'
@@ -852,7 +848,6 @@ endef
 define openexr_BUILD
     cd '$(BUILD_DIR)' && $(TARGET)-cmake \
         -DOPENEXR_INSTALL_PKG_CONFIG=ON \
-        -DOPENEXR_ENABLE_THREADING=$(if $(WIN32_THREADS),OFF,ON) \
         -DOPENEXR_INSTALL_TOOLS=OFF \
         -DOPENEXR_BUILD_TOOLS=OFF \
         -DBUILD_TESTING=OFF \

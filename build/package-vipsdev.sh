@@ -17,20 +17,16 @@ DEPS:
 
 TARGET:
 	The binary target,
-	    defaults to 'x86_64-w64-mingw32.shared.win32'
+	    defaults to 'x86_64-w64-mingw32.shared'
 	Possible values are:
-		- aarch64-w64-mingw32.shared.posix
-		- aarch64-w64-mingw32.static.posix
-		- armv7-w64-mingw32.shared.posix
-		- armv7-w64-mingw32.static.posix
-		- i686-w64-mingw32.shared.posix
-		- i686-w64-mingw32.shared.win32
-		- i686-w64-mingw32.static.posix
-		- i686-w64-mingw32.static.win32
-		- x86_64-w64-mingw32.shared.posix
-		- x86_64-w64-mingw32.shared.win32
-		- x86_64-w64-mingw32.static.posix
-		- x86_64-w64-mingw32.static.win32
+		- x86_64-w64-mingw32.shared
+		- x86_64-w64-mingw32.static
+		- i686-w64-mingw32.shared
+		- i686-w64-mingw32.static
+		- aarch64-w64-mingw32.shared
+		- aarch64-w64-mingw32.static
+		- armv7-w64-mingw32.shared
+		- armv7-w64-mingw32.static
 EOF
   exit 0
 fi
@@ -38,7 +34,7 @@ fi
 . variables.sh
 
 deps="${1:-web}"
-target="${2:-x86_64-w64-mingw32.shared.win32}"
+target="${2:-x86_64-w64-mingw32.shared}"
 arch="${target%%-*}"
 type="${target#*.}"
 type="${type%%.*}"
@@ -77,10 +73,6 @@ fi
 
 if [ "$DEBUG" = "true" ]; then
   zip_suffix+="-debug"
-fi
-
-if [ "$LLVM" = "false" ]; then
-  zip_suffix+="-gcc"
 fi
 
 if [ "$JPEG_IMPL" != "mozjpeg" ]; then
@@ -157,14 +149,9 @@ echo "Generating import files"
 
 echo "Cleaning unnecessary files / directories"
 
-if [ "$LLVM" = "true" ]; then
-  # Ensure that the header files of libc++/libunwind are not distributed
-  rm -rf $repackage_dir/include/c++
-  rm -rf $repackage_dir/include/{*unwind*,mach-o}
-else
-  # Remove native build files of Rust
-  rm -rf $repackage_dir/lib/{*.so*,ldscripts,rustlib}
-fi
+# Ensure that the header files of libc++/libunwind are not distributed
+rm -rf $repackage_dir/include/c++
+rm -rf $repackage_dir/include/{*unwind*,mach-o}
 
 rm -rf $repackage_dir/share/{aclocal,bash-completion,cmake,config.site,doc,gdb,glib-2.0,gtk-2.0,gtk-doc,installed-tests,man,meson,thumbnailers,xml,zsh}
 rm -rf $repackage_dir/etc/bash_completion.d

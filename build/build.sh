@@ -20,20 +20,16 @@ DEPS:
 
 TARGET:
 	The binary target,
-	    defaults to 'x86_64-w64-mingw32.shared.win32'
+	    defaults to 'x86_64-w64-mingw32.shared'
 	Possible values are:
-		- aarch64-w64-mingw32.shared.posix
-		- aarch64-w64-mingw32.static.posix
-		- armv7-w64-mingw32.shared.posix
-		- armv7-w64-mingw32.static.posix
-		- i686-w64-mingw32.shared.posix
-		- i686-w64-mingw32.shared.win32
-		- i686-w64-mingw32.static.posix
-		- i686-w64-mingw32.static.win32
-		- x86_64-w64-mingw32.shared.posix
-		- x86_64-w64-mingw32.shared.win32
-		- x86_64-w64-mingw32.static.posix
-		- x86_64-w64-mingw32.static.win32
+		- x86_64-w64-mingw32.shared
+		- x86_64-w64-mingw32.static
+		- i686-w64-mingw32.shared
+		- i686-w64-mingw32.static
+		- aarch64-w64-mingw32.shared
+		- aarch64-w64-mingw32.static
+		- armv7-w64-mingw32.shared
+		- armv7-w64-mingw32.static
 EOF
   exit 0
 fi
@@ -41,7 +37,7 @@ fi
 . variables.sh
 
 deps="${1:-web}"
-target="${2:-x86_64-w64-mingw32.shared.win32}"
+target="${2:-x86_64-w64-mingw32.shared}"
 
 if [[ "$target" == *.static* ]] && [ "$deps" = "all" ]; then
   echo "ERROR: Distributing a statically linked library against GPL libraries, without releasing the code as GPL, violates the GPL license." >&2
@@ -75,18 +71,10 @@ if [ "$initialize" = true ]; then
   git apply $work_dir/patches/mxe-fixes.patch
 fi
 
-if [ "$DEBUG" = "false" ]; then
-  settings_suffix="release"
+if [ "$DEBUG" = "true" ]; then
+  cp -f $work_dir/settings/debug.mk $mxe_dir/settings.mk
 else
-  settings_suffix="debug"
-fi
-
-if [ "$LLVM" = "true" ]; then
-  # Copy LLVM settings
-  cp -f $work_dir/settings/llvm-$settings_suffix.mk $mxe_dir/settings.mk
-else
-  # Copy GCC settings
-  cp -f $work_dir/settings/gcc-$settings_suffix.mk $mxe_dir/settings.mk
+  cp -f $work_dir/settings/release.mk $mxe_dir/settings.mk
 fi
 
 # The 'plugins' variable controls which plugins are in use
@@ -108,11 +96,7 @@ if [ "$ZLIB_NG" = "true" ]; then
   plugins+=" $work_dir/plugins/zlib-ng"
 fi
 
-if [ "$LLVM" = "true" ]; then
-  plugins+=" $work_dir/plugins/llvm-mingw"
-else
-  plugins+=" plugins/gcc13 $work_dir/plugins/gcc"
-fi
+plugins+=" $work_dir/plugins/llvm-mingw"
 
 # Avoid shipping the gettext DLL (libintl-8.dll),
 # use a statically build dummy implementation instead.
@@ -143,7 +127,7 @@ make gendef vips-$deps \
   GIT_COMMIT=$GIT_COMMIT
 
 # Build and bundle llvm-mingw tests when debugging
-if [ "$LLVM" = "true" ] && [ "$DEBUG" = "true" ]; then
+if [ "$DEBUG" = "true" ]; then
   make test-llvm-mingw \
     MXE_PLUGIN_DIRS="$plugins" \
     MXE_TARGETS=$target.$deps
