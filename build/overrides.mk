@@ -612,9 +612,6 @@ define librsvg_BUILD
     (cd '$(SOURCE_DIR)' && $(PATCH) -p1 -u) < $(realpath $(dir $(lastword $(librsvg_PATCHES))))/librsvg-llvm-mingw.patch
 
     # Update expected Cargo SHA256 hashes for the vendored files we have patched
-    $(SED) -i 's/6ff27ce632a988dd9bcf083dbaa02615254ff29f3e82252539b04f0eb3c629ba/4e83c7139d3bee1826c1f430f57ea39ac099d245d2ca352046b4c448c386078a/' '$(SOURCE_DIR)/vendor/cfg-expr/.cargo-checksum.json'
-    $(SED) -i 's/85f31d450b44d1f9e329e72a46d181a22e2933593407eeaaebb120453f82757f/30bd0d4dab0d3ca6a0dad131fec3b93bf336913e300c0a750515e8a1c1a5de70/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'
-    $(SED) -i 's/204bc39a8213167dcab8dd273c57e5fae3afbac8fa3887dbe43ad082d55446e4/0e8c4e6440c5377f487918f16a8ea80aae53fa4d47e495a9e9c0119b575db0ab/' '$(SOURCE_DIR)/vendor/windows-sys/.cargo-checksum.json'
     $(SED) -i 's/117b50d6725ee0af0a7b3d197ea580655561f66a870ebc450d96af22bf7f39f6/15e6e8180d52761492423aa3a1284b6640bc3dee9ba030465ec0e15fe6cfe754/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'
     $(SED) -i 's/aa26062784eff574fee4075d23b0ea2fdd1bdbc9a7458b099c8fd307ee61024f/13b5e010a0d45164844fda4ada4d4e965f422f2a27768b3ce495c637714cf66f/' '$(SOURCE_DIR)/vendor/compiler_builtins/.cargo-checksum.json'
 
@@ -711,9 +708,6 @@ endef
 
 # disable unneeded loaders
 define libwebp_BUILD
-    # When targeting Armv7 we need to build without `-gcodeview`:
-    # `fatal error: error in backend: unknown codeview register D1_D2`
-    # FIXME(kleisauke): https://github.com/llvm/llvm-project/issues/64278
     cd '$(BUILD_DIR)' && $(SOURCE_DIR)/configure \
         $(MXE_CONFIGURE_OPTS) \
         --disable-gl \
@@ -723,8 +717,7 @@ define libwebp_BUILD
         --disable-tiff \
         --disable-gif \
         --enable-libwebpmux \
-        --enable-libwebpdemux \
-        $(if $(call seq,armv7,$(PROCESSOR)), CFLAGS='')
+        --enable-libwebpdemux
     $(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)' $(MXE_DISABLE_PROGRAMS)
     $(MAKE) -C '$(BUILD_DIR)' -j 1 $(INSTALL_STRIP_LIB) $(MXE_DISABLE_PROGRAMS)
 endef

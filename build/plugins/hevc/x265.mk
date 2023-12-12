@@ -24,10 +24,7 @@ define $(PKG)_BUILD
 
     # Fix ARM NEON includes when building the 10/12bit libraries
     # https://bitbucket.org/multicoreware/x265_git/issues/549/fail-to-build-for-aarch64-and-armhf
-    $(if $(IS_ARM), \
-        $(foreach ARCH,aarch64 arm, \
-            $(SED) -i 's/PFX(\(.*\))/x265_\1/g' '$(SOURCE_DIR)/source/common/$(ARCH)/asm-primitives.cpp';) \
-        $(SED) -i 's/PFX(\(.*_neon\))/x265_\1/g' '$(SOURCE_DIR)/source/common/arm/dct8.h';)
+    $(SED) -i 's/PFX(\(.*\))/x265_\1/g' '$(SOURCE_DIR)/source/common/aarch64/asm-primitives.cpp'
 
     # 12 bit
     cd '$(BUILD_DIR)/12bit' && $(TARGET)-cmake '$(SOURCE_DIR)/source' \
@@ -38,7 +35,7 @@ define $(PKG)_BUILD
         -DENABLE_CLI=OFF \
         -DENABLE_HDR10_PLUS=ON \
         -DMAIN12=ON \
-        $(if $(IS_ARM), -DCROSS_COMPILE_ARM=ON)
+        -DCROSS_COMPILE_ARM=$(if $(IS_X86),OFF,ON)
 
     $(MAKE) -C '$(BUILD_DIR)/12bit' -j '$(JOBS)'
     cp '$(BUILD_DIR)/12bit/libx265.a' '$(BUILD_DIR)/libx265_main12.a'
@@ -51,7 +48,7 @@ define $(PKG)_BUILD
         -DENABLE_ASSEMBLY=$(if $(call seq,64,$(BITS)),ON,OFF) \
         -DENABLE_CLI=OFF \
         -DENABLE_HDR10_PLUS=ON \
-        $(if $(IS_ARM), -DCROSS_COMPILE_ARM=ON)
+        -DCROSS_COMPILE_ARM=$(if $(IS_X86),OFF,ON)
 
     $(MAKE) -C '$(BUILD_DIR)/10bit' -j '$(JOBS)'
     cp '$(BUILD_DIR)/10bit/libx265.a' '$(BUILD_DIR)/libx265_main10.a'
@@ -68,7 +65,7 @@ define $(PKG)_BUILD
         -DEXTRA_LINK_FLAGS=-L'$(BUILD_DIR)' \
         -DLINKED_10BIT=ON \
         -DLINKED_12BIT=ON \
-        $(if $(IS_ARM), -DCROSS_COMPILE_ARM=ON)
+        -DCROSS_COMPILE_ARM=$(if $(IS_X86),OFF,ON)
 
     $(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)' $(subst -,/,$(INSTALL_STRIP_LIB))
 

@@ -5,7 +5,7 @@ Contains ad hoc patches for cross building.
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Kleis Auke Wolthuizen <github@kleisauke.nl>
 Date: Fri, 14 Feb 2020 15:20:00 +0100
-Subject: [PATCH 1/8] Add support for targeting ARM/ARM64
+Subject: [PATCH 1/8] Add support for targeting ARM64
 
 See: mxe/mxe#2330
 
@@ -19,11 +19,11 @@ index 1111111..2222222 100644
  
 -MXE_TRIPLETS       := i686-w64-mingw32 x86_64-w64-mingw32
 +MXE_TRIPLETS       := i686-w64-mingw32 x86_64-w64-mingw32 \
-+                      armv7-w64-mingw32 aarch64-w64-mingw32
++                      aarch64-w64-mingw32
  MXE_LIB_TYPES      := static shared
  MXE_TARGET_LIST    := $(strip $(foreach TRIPLET,$(MXE_TRIPLETS),\
                            $(addprefix $(TRIPLET).,$(MXE_LIB_TYPES))))
-@@ -822,8 +823,10 @@ build-only-$(1)_$(3): BUILD_$(if $(findstring shared,$(3)),SHARED,STATIC) = TRUE
+@@ -831,8 +832,9 @@ build-only-$(1)_$(3): BUILD_$(if $(findstring shared,$(3)),SHARED,STATIC) = TRUE
  build-only-$(1)_$(3): BUILD_$(if $(call seq,$(TARGET),$(BUILD)),NATIVE,CROSS) = TRUE
  build-only-$(1)_$(3): $(if $(findstring win32,$(TARGET)),WIN32,POSIX)_THREADS = TRUE
  build-only-$(1)_$(3): LIB_SUFFIX = $(if $(findstring shared,$(3)),dll,a)
@@ -31,7 +31,6 @@ index 1111111..2222222 100644
 +build-only-$(1)_$(3): BITS = $(if $(or $(findstring x86_64,$(3)),$(findstring aarch64,$(3))),64,32)
  build-only-$(1)_$(3): PROCESSOR = $(firstword $(call split,-,$(3)))
 +build-only-$(1)_$(3): IS_X86 = $(or $(findstring x86_64,$(3)),$(findstring i686,$(3)))
-+build-only-$(1)_$(3): IS_ARM = $(or $(findstring armv7,$(3)),$(findstring aarch64,$(3)))
  build-only-$(1)_$(3): BUILD_TYPE = $(if $(findstring debug,$(3) $($(1)_CONFIGURE_OPTS)),debug,release)
  build-only-$(1)_$(3): BUILD_TYPE_SUFFIX = $(if $(findstring debug,$(3) $($(1)_CONFIGURE_OPTS)),d)
  build-only-$(1)_$(3): INSTALL_STRIP_TOOLCHAIN = install$(if $(STRIP_TOOLCHAIN),-strip)
@@ -39,18 +38,17 @@ diff --git a/src/meson-wrapper.mk b/src/meson-wrapper.mk
 index 1111111..2222222 100644
 --- a/src/meson-wrapper.mk
 +++ b/src/meson-wrapper.mk
-@@ -22,11 +22,12 @@ define $(PKG)_BUILD
+@@ -21,12 +21,10 @@ define $(PKG)_BUILD
+         -DPREFIX=$(PREFIX) \
          -DTARGET=$(TARGET) \
          -DBUILD=$(BUILD) \
-         -DCPU_FAMILY=$(strip \
+-        -DCPU_FAMILY=$(strip \
 -             $(if $(findstring x86_64,$(TARGET)),x86_64,\
 -             $(if $(findstring i686,$(TARGET)),x86))) \
 -        -DCPU=$(strip \
 -             $(if $(findstring x86_64,$(TARGET)),x86_64,\
 -             $(if $(findstring i686,$(TARGET)),i686))) \
-+            $(if $(findstring armv7,$(PROCESSOR)),arm, \
-+            $(if $(findstring i686,$(PROCESSOR)),x86, \
-+            $(PROCESSOR)))) \
++        -DCPU_FAMILY=$(if $(findstring i686,$(PROCESSOR)),x86,$(PROCESSOR)) \
 +        -DCPU=$(PROCESSOR) \
 +        -DCC=$(if $(IS_LLVM),clang,gcc) \
 +        -DCXX=$(if $(IS_LLVM),clang++,g++) \
@@ -99,9 +97,9 @@ index 1111111..2222222 100644
          -DTARGET=$(TARGET) \
 +        -DSTRIP=$(if $(STRIP_LIB),true,false) \
          -DBUILD=$(BUILD) \
-         -DCPU_FAMILY=$(strip \
-             $(if $(findstring armv7,$(PROCESSOR)),arm, \
-@@ -41,10 +42,8 @@ define $(PKG)_BUILD
+         -DCPU_FAMILY=$(if $(findstring i686,$(PROCESSOR)),x86,$(PROCESSOR)) \
+         -DCPU=$(PROCESSOR) \
+@@ -38,10 +39,8 @@ define $(PKG)_BUILD
  
      # create the prefixed Meson wrapper script
      '$(PREFIX)/bin/cmake-configure-file' \
@@ -137,8 +135,12 @@ diff --git a/src/meson-wrapper/conf/target-meson.in b/src/meson-wrapper/conf/tar
 index 1111111..2222222 100644
 --- a/src/meson-wrapper/conf/target-meson.in
 +++ b/src/meson-wrapper/conf/target-meson.in
-@@ -11,10 +11,5 @@ if [[ "$NO_MESON_CROSSFILE" == "1" ]]; then
-     exec meson "$@"
+@@ -8,13 +8,8 @@ fi
+ 
+ if [[ "$NO_MESON_CROSSFILE" == "1" ]]; then
+     echo "== Skip using Meson cross file: @MESON_CROSS_FILE@"
+-    exec meson "$@"
++    exec meson setup "$@"
  else
      echo "== Using Meson cross file: @MESON_CROSS_FILE@"
 -    exec @MESON_EXECUTABLE@ \
@@ -147,7 +149,7 @@ index 1111111..2222222 100644
 -              --prefix="@PREFIX@/@TARGET@" \
 -              --libdir=lib \
 -              "$@"
-+    exec @MESON_EXECUTABLE@ --cross-file="@MESON_CROSS_FILE@" "$@"
++    exec @MESON_EXECUTABLE@ setup --cross-file="@MESON_CROSS_FILE@" "$@"
  fi
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
@@ -276,7 +278,7 @@ diff --git a/Makefile b/Makefile
 index 1111111..2222222 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -734,6 +734,7 @@ $(foreach PKG,$(PKGS),$(eval $(call PKG_RULE,$(PKG),$(call TMP_DIR,$(PKG)))))
+@@ -739,6 +739,7 @@ $(foreach PKG,$(PKGS),$(eval $(call PKG_RULE,$(PKG),$(call TMP_DIR,$(PKG)))))
  ifeq ($(findstring darwin,$(BUILD)),)
      NONET_LIB := $(PREFIX)/$(BUILD)/lib/nonetwork.so
      PRELOAD   := LD_PRELOAD='$(NONET_LIB)'
@@ -284,7 +286,7 @@ index 1111111..2222222 100644
  else
      NONET_LIB := $(PREFIX)/$(BUILD)/lib/nonetwork.dylib
      PRELOAD   := DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES='$(NONET_LIB)' \
-@@ -743,7 +744,7 @@ endif
+@@ -748,7 +749,7 @@ endif
  
  $(NONET_LIB): $(TOP_DIR)/tools/nonetwork.c | $(PREFIX)/$(BUILD)/lib/.gitkeep
  	@$(PRINTF_FMT) '[nonet lib]' '$@'
@@ -463,7 +465,7 @@ diff --git a/Makefile b/Makefile
 index 1111111..2222222 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -331,12 +331,15 @@ endef
+@@ -337,12 +337,15 @@ endef
  PKG_CHECKSUM = \
      $(OPENSSL) dgst -sha256 '$(or $(2),$(PKG_DIR)/$($(1)_FILE))' 2>/dev/null | $(SED) -n 's,^.*\([0-9a-f]\{64\}\)$$,\1,p'
  
@@ -482,7 +484,7 @@ index 1111111..2222222 100644
  
  ESCAPE_PKG = \
  	echo '$($(1)_FILE)' | perl -lpe 's/([^A-Za-z0-9])/sprintf("%%%02X", ord($$$$1))/seg'
-@@ -696,7 +699,7 @@ download-only-$(1): download-only-$($(1)_FILE)
+@@ -701,7 +704,7 @@ download-only-$(1): download-only-$($(1)_FILE)
  download-only-$($(1)_FILE)::
  	$(and $($(1)_URL),
  	@$$(if $$(REMOVE_DOWNLOAD),rm -f '$(PKG_DIR)/$($(1)_FILE)')
@@ -512,7 +514,7 @@ index 1111111..2222222 100644
  # disable by setting MXE_USE_CCACHE
  MXE_USE_CCACHE      := mxe
  MXE_CCACHE_DIR      := $(PWD)/.ccache
-@@ -880,6 +883,7 @@ build-only-$(1)_$(3):
+@@ -882,6 +885,7 @@ build-only-$(1)_$(3):
  	    @echo 'settings.mk'
  	    @cat '$(TOP_DIR)/settings.mk'
  	    $(if $(STRIP_EXE),-$(TARGET)-strip '$(PREFIX)/$(TARGET)/bin/test-$(PKG).exe')
