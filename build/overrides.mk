@@ -12,7 +12,7 @@ libffi_URL      := https://github.com/libffi/libffi/releases/download/v$(libffi_
 libffi_URL_2    := https://sourceware.org/pub/libffi/$(libffi_FILE)
 
 # upstream version is 2.42.6
-# gdk-pixbuf is still used by OpenSlide and the C API of librsvg
+# gdk-pixbuf is still used by OpenSlide
 gdk-pixbuf_VERSION  := 2.42.10
 gdk-pixbuf_CHECKSUM := ee9b6c75d13ba096907a2e3c6b27b61bcd17f5c7ebeab5a5b439d2f2e39fe44b
 gdk-pixbuf_PATCHES  := $(realpath $(sort $(wildcard $(dir $(lastword $(MAKEFILE_LIST)))/patches/gdk-pixbuf-[0-9]*.patch)))
@@ -61,12 +61,13 @@ graphicsmagick_FILE     := GraphicsMagick-$(graphicsmagick_VERSION).tar.lz
 graphicsmagick_URL      := https://$(SOURCEFORGE_MIRROR)/project/graphicsmagick/graphicsmagick/$(graphicsmagick_VERSION)/$(graphicsmagick_FILE)
 
 # upstream version is 2.40.21
-librsvg_VERSION  := 673d37b5
-librsvg_CHECKSUM := 1facc23d3ba03d359a11d58266a2a2dabd03f798bd0dc80e28a1f8ef2ad67322
+# https://gitlab.gnome.org/kleisauke/librsvg/-/commit/75cf710c10378b6a40e8a4f04b09d3b6c6db0ad7
+librsvg_VERSION  := 75cf710c
+librsvg_CHECKSUM := 95adb28e9663971589629884108de6d99a4b87fa956c489270974b4f585a5c6b
 librsvg_PATCHES  := $(realpath $(sort $(wildcard $(dir $(lastword $(MAKEFILE_LIST)))/patches/librsvg-[0-9]*.patch)))
 librsvg_SUBDIR   := librsvg-$(librsvg_VERSION)
 librsvg_FILE     := librsvg-$(librsvg_VERSION).tar.gz
-librsvg_URL      := https://gitlab.gnome.org/GNOME/librsvg/-/archive/$(librsvg_VERSION)/$(librsvg_FILE)
+librsvg_URL      := https://gitlab.gnome.org/kleisauke/librsvg/-/archive/$(librsvg_VERSION)/$(librsvg_FILE)
 
 # upstream version is 1.51.0
 pango_VERSION  := 1.52.1
@@ -238,7 +239,7 @@ zlib_PATCHES := $(realpath $(sort $(wildcard $(dir $(lastword $(MAKEFILE_LIST)))
 #  Removed: boost, curl, qt6-qtbase, libwebp
 # librsvg:
 #  Added: libxml2, rust, $(BUILD)~cargo-c
-#  Removed: libcroco, libgsf
+#  Removed: gdk-pixbuf, libcroco, libgsf
 # Cairo:
 #  Added: meson-wrapper
 #  Removed: lzo
@@ -272,7 +273,7 @@ imagemagick_DEPS        := cc libxml2 openjpeg lcms libjpeg-turbo
 graphicsmagick_DEPS     := $(imagemagick_DEPS)
 openexr_DEPS            := cc imath zlib
 poppler_DEPS            := cc cairo libjpeg-turbo freetype glib openjpeg lcms libpng tiff zlib
-librsvg_DEPS            := $(filter-out libcroco libgsf ,$(librsvg_DEPS)) libxml2 rust $(BUILD)~cargo-c
+librsvg_DEPS            := cc cairo glib pango libxml2 rust $(BUILD)~cargo-c
 cairo_DEPS              := cc meson-wrapper fontconfig freetype-bootstrap glib libpng pixman
 matio_DEPS              := $(filter-out hdf5 ,$(matio_DEPS))
 libjpeg-turbo_DEPS      := $(subst yasm,$(BUILD)~nasm,$(libjpeg-turbo_DEPS))
@@ -628,6 +629,7 @@ define librsvg_BUILD
 
     $(MXE_MESON_WRAPPER) \
         -Dintrospection=disabled \
+        -Dpixbuf=disabled \
         -Dpixbuf-loader=disabled \
         -Ddocs=disabled \
         -Dvala=disabled \
